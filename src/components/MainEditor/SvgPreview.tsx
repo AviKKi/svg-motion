@@ -1,6 +1,7 @@
 import { Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
+import { useAnimationStore } from '@/stores/animationStore'
 
 const SAMPLE_SVGS = [
   { name: 'Phone Call', path: '/sampleSvg/phone-call.svg' }
@@ -21,7 +22,7 @@ export function SvgPreview({
   onSampleSvgSelect, 
   onClearSvg 
 }: SvgPreviewProps) {
-  const [svgContent, setSvgContent] = useState<string>('')
+  const { svgContent, svgUri, setSvgContent, setSvgUri } = useAnimationStore()
   const [isLoading, setIsLoading] = useState(false)
   const hasSvg = svgFile || selectedSampleSvg
 
@@ -29,6 +30,7 @@ export function SvgPreview({
     const loadSvgContent = async () => {
       if (!hasSvg) {
         setSvgContent('')
+        setSvgUri('')
         return
       }
 
@@ -37,23 +39,36 @@ export function SvgPreview({
         if (svgFile) {
           // Read uploaded SVG file
           const content = await svgFile.text()
+          const uri = URL.createObjectURL(svgFile)
           setSvgContent(content)
+          setSvgUri(uri)
         } else if (selectedSampleSvg) {
           // Fetch sample SVG
           const response = await fetch(selectedSampleSvg)
           const content = await response.text()
           setSvgContent(content)
+          setSvgUri(selectedSampleSvg)
         }
       } catch (error) {
         console.error('Error loading SVG:', error)
         setSvgContent('')
+        setSvgUri('')
       } finally {
         setIsLoading(false)
       }
     }
 
     loadSvgContent()
-  }, [svgFile, selectedSampleSvg, hasSvg])
+  }, [svgFile, selectedSampleSvg, hasSvg, setSvgContent, setSvgUri])
+
+  // Cleanup object URL when component unmounts or SVG changes
+  useEffect(() => {
+    return () => {
+      if (svgFile && svgUri && svgUri.startsWith('blob:')) {
+        URL.revokeObjectURL(svgUri)
+      }
+    }
+  }, [svgFile, svgUri])
 
   return (
     <div className="h-full bg-muted/10 flex items-center justify-center">
