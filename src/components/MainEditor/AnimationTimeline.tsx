@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { useAnimationStore } from '../../stores/animationStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { Play, Pause } from 'lucide-react';
@@ -8,6 +8,7 @@ const TIMELINE_HEIGHT = 80;
 const TIMELINE_BAR_HEIGHT = 1;
 const PLAYHEAD_SIZE = 16;
 const TIMELINE_DURATION = 6000; // 6 seconds in ms
+const VIRTUAL_WIDTH = 2000; // Total virtual width for scrolling
 
 function formatTime(timeMs: number): string {
   const totalMs = Math.floor(timeMs);
@@ -56,28 +57,42 @@ function drawGridLines(
   width: number,
   height: number,
   timelineY: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
   ctx.lineWidth = 1;
-  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000); // Calculate based on actual canvas width
+  const pixelsPerSecond = VIRTUAL_WIDTH / (TIMELINE_DURATION / 1000); // Calculate based on virtual width
 
-  for (let i = 0; i <= 6; i++) {
-    const x = i * pixelsPerSecond;
-    // Major line
-    ctx.strokeStyle = colors.gridMajor;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.stroke();
+  // Calculate visible range based on scroll offset
+  const startTime = (scrollOffset / VIRTUAL_WIDTH) * TIMELINE_DURATION;
+  const endTime = ((scrollOffset + width) / VIRTUAL_WIDTH) * TIMELINE_DURATION;
 
-    // Minor grid lines (0.2s intervals)
-    ctx.strokeStyle = colors.gridMinor;
-    for (let j = 1; j < 5; j++) {
-      const minorX = x + (j * pixelsPerSecond) / 5;
+  const startSecond = Math.floor(startTime / 1000);
+  const endSecond = Math.ceil(endTime / 1000) + 1;
+
+  for (let i = startSecond; i <= Math.min(endSecond, 6); i++) {
+    const x = i * pixelsPerSecond - scrollOffset;
+
+    // Only draw if line is visible in viewport
+    if (x >= -1 && x <= width + 1) {
+      // Major line
+      ctx.strokeStyle = colors.gridMajor;
       ctx.beginPath();
-      ctx.moveTo(minorX, timelineY - 10);
-      ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10);
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
       ctx.stroke();
+
+      // Minor grid lines (0.2s intervals)
+      ctx.strokeStyle = colors.gridMinor;
+      for (let j = 1; j < 5; j++) {
+        const minorX = x + (j * pixelsPerSecond) / 5;
+        if (minorX >= -1 && minorX <= width + 1) {
+          ctx.beginPath();
+          ctx.moveTo(minorX, timelineY - 10);
+          ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10);
+          ctx.stroke();
+        }
+      }
     }
   }
 }
@@ -85,17 +100,24 @@ function drawGridLines(
 /** Divider seperating time markers from the timeline bar */
 function drawTimelineBar(
   ctx: CanvasRenderingContext2D,
-  width: number,
+  _width: number,
   timelineY: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
   // Draw timeline bar shadow
   ctx.fillStyle = colors.shadow;
 
-  // Draw timeline bar with rounded corners
+  // Draw timeline bar with rounded corners - extend beyond viewport to avoid gaps
   ctx.fillStyle = colors.bar;
   ctx.beginPath();
-  ctx.roundRect(0, timelineY, width, TIMELINE_BAR_HEIGHT, 6);
+  ctx.roundRect(
+    -scrollOffset,
+    timelineY,
+    VIRTUAL_WIDTH,
+    TIMELINE_BAR_HEIGHT,
+    6
+  );
   ctx.fill();
 }
 
@@ -103,7 +125,8 @@ function drawTimeLabels(
   ctx: CanvasRenderingContext2D,
   width: number,
   timelineY: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
   ctx.fillStyle = colors.label;
   ctx.font =
@@ -111,12 +134,24 @@ function drawTimeLabels(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
-  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000); // Calculate based on actual canvas width
+  const pixelsPerSecond = VIRTUAL_WIDTH / (TIMELINE_DURATION / 1000); // Calculate based on virtual width
 
-  for (let i = 0; i <= 6; i++) {
-    const x = i * pixelsPerSecond;
-    const label = i === 0 ? '0' : `${i}s`;
-    ctx.fillText(label, x, timelineY + TIMELINE_BAR_HEIGHT + 8);
+  // Calculate visible range based on scroll offset
+  const startTime = (scrollOffset / VIRTUAL_WIDTH) * TIMELINE_DURATION;
+  const endTime = ((scrollOffset + width) / VIRTUAL_WIDTH) * TIMELINE_DURATION;
+
+  const startSecond = Math.floor(startTime / 1000);
+  const endSecond = Math.ceil(endTime / 1000) + 1;
+
+  for (let i = startSecond; i <= Math.min(endSecond, 6); i++) {
+    const x = i * pixelsPerSecond - scrollOffset;
+
+    // Only draw if label is visible in viewport
+    if (x >= -50 && x <= width + 50) {
+      // Extra margin for text
+      const label = i === 0 ? '0' : `${i}s`;
+      ctx.fillText(label, x, timelineY + TIMELINE_BAR_HEIGHT + 8);
+    }
   }
 }
 
@@ -124,18 +159,31 @@ function drawTickMarks(
   ctx: CanvasRenderingContext2D,
   width: number,
   timelineY: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
   ctx.fillStyle = colors.tick;
-  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000); // Calculate based on actual canvas width
+  const pixelsPerSecond = VIRTUAL_WIDTH / (TIMELINE_DURATION / 1000); // Calculate based on virtual width
 
-  for (let i = 0; i <= 6; i++) {
-    const x = i * pixelsPerSecond;
+  // Calculate visible range based on scroll offset
+  const startTime = (scrollOffset / VIRTUAL_WIDTH) * TIMELINE_DURATION;
+  const endTime = ((scrollOffset + width) / VIRTUAL_WIDTH) * TIMELINE_DURATION;
+
+  const startSecond = Math.floor(startTime / 1000);
+  const endSecond = Math.ceil(endTime / 1000) + 1;
+
+  for (let i = startSecond; i <= Math.min(endSecond, 6); i++) {
+    const x = i * pixelsPerSecond - scrollOffset;
+
     for (let j = 1; j < 5; j++) {
       const tickX = x + (j * pixelsPerSecond) / 5;
-      ctx.beginPath();
-      ctx.arc(tickX, timelineY - 4, 1.5, 0, Math.PI * 2);
-      ctx.fill();
+
+      // Only draw if tick is visible in viewport
+      if (tickX >= -10 && tickX <= width + 10) {
+        ctx.beginPath();
+        ctx.arc(tickX, timelineY - 4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 }
@@ -146,44 +194,56 @@ function drawPlayhead(
   height: number,
   timelineY: number,
   currentTime: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
-  const playheadX = (currentTime / TIMELINE_DURATION) * width;
+  const playheadX =
+    (currentTime / TIMELINE_DURATION) * VIRTUAL_WIDTH - scrollOffset;
 
-  // Draw playhead line from top to bottom
-  ctx.strokeStyle = colors.playhead;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(playheadX, 6);
-  ctx.lineTo(playheadX, height);
-  ctx.stroke();
+  // Only draw playhead if it's visible in viewport
+  if (playheadX >= -PLAYHEAD_SIZE && playheadX <= width + PLAYHEAD_SIZE) {
+    // Draw playhead line from top to bottom
+    ctx.strokeStyle = colors.playhead;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 6);
+    ctx.lineTo(playheadX, height);
+    ctx.stroke();
 
-  // Draw playhead handle (pointing downward)
-  ctx.fillStyle = colors.playheadHandle;
-  ctx.beginPath();
-  ctx.moveTo(playheadX, timelineY - 4);
-  ctx.lineTo(playheadX - PLAYHEAD_SIZE / 2, timelineY - 4 - PLAYHEAD_SIZE / 2);
-  ctx.lineTo(playheadX + PLAYHEAD_SIZE / 2, timelineY - 4 - PLAYHEAD_SIZE / 2);
-  ctx.closePath();
-  ctx.fill();
+    // Draw playhead handle (pointing downward)
+    ctx.fillStyle = colors.playheadHandle;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, timelineY - 4);
+    ctx.lineTo(
+      playheadX - PLAYHEAD_SIZE / 2,
+      timelineY - 4 - PLAYHEAD_SIZE / 2
+    );
+    ctx.lineTo(
+      playheadX + PLAYHEAD_SIZE / 2,
+      timelineY - 4 - PLAYHEAD_SIZE / 2
+    );
+    ctx.closePath();
+    ctx.fill();
 
-  // Add rounded corners to the handle
-  ctx.fillStyle = colors.playheadHandle;
-  ctx.beginPath();
-  ctx.roundRect(
-    playheadX - PLAYHEAD_SIZE / 2,
-    timelineY - 18 - PLAYHEAD_SIZE / 2,
-    PLAYHEAD_SIZE,
-    PLAYHEAD_SIZE / 2 + 8,
-    3
-  );
-  ctx.fill();
+    // Add rounded corners to the handle
+    ctx.fillStyle = colors.playheadHandle;
+    ctx.beginPath();
+    ctx.roundRect(
+      playheadX - PLAYHEAD_SIZE / 2,
+      timelineY - 18 - PLAYHEAD_SIZE / 2,
+      PLAYHEAD_SIZE,
+      PLAYHEAD_SIZE / 2 + 8,
+      3
+    );
+    ctx.fill();
+  }
 }
 
 function drawTimeline(
   canvas: HTMLCanvasElement,
   currentTime: number,
-  colors: TimelineColors
+  colors: TimelineColors,
+  scrollOffset: number = 0
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -194,16 +254,26 @@ function drawTimeline(
   // Clear canvas
   ctx.clearRect(0, 0, width, height);
 
-  // Draw all components
-  drawGridLines(ctx, width, height, timelineY, colors);
-  drawTimelineBar(ctx, width, PLAYHEAD_SIZE + 8, colors);
-  drawTimeLabels(ctx, width, timelineY, colors);
-  drawTickMarks(ctx, width, timelineY, colors);
-  drawPlayhead(ctx, width, height, timelineY + 25, currentTime, colors);
+  // Draw all components with scroll offset
+  drawGridLines(ctx, width, height, timelineY, colors, scrollOffset);
+  drawTimelineBar(ctx, width, PLAYHEAD_SIZE + 8, colors, scrollOffset);
+  drawTimeLabels(ctx, width, timelineY, colors, scrollOffset);
+  drawTickMarks(ctx, width, timelineY, colors, scrollOffset);
+  drawPlayhead(
+    ctx,
+    width,
+    height,
+    timelineY + 25,
+    currentTime,
+    colors,
+    scrollOffset
+  );
 }
 
 export function AnimationTimeline() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollOffset, setScrollOffset] = useState(0);
   const { currentTime, isPlaying, seek, play, pause } = useAnimationStore();
   const { theme } = useThemeStore();
   const colors = theme === 'dark' ? darkColors : lightColors;
@@ -214,13 +284,13 @@ export function AnimationTimeline() {
       if (!canvas) return;
 
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const newTime = (x / canvas.width) * TIMELINE_DURATION;
+      const x = e.clientX - rect.left + scrollOffset; // Account for scroll offset
+      const newTime = (x / VIRTUAL_WIDTH) * TIMELINE_DURATION;
       const clampedTime = Math.max(0, Math.min(TIMELINE_DURATION, newTime));
 
       seek(clampedTime);
     },
-    [seek]
+    [seek, scrollOffset]
   );
 
   const handleMouseMove = useCallback(
@@ -233,12 +303,18 @@ export function AnimationTimeline() {
     [handleMouseDown]
   );
 
+  // Handle scroll events
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    setScrollOffset(scrollLeft);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      drawTimeline(canvas, currentTime, colors);
+      drawTimeline(canvas, currentTime, colors, scrollOffset);
     }
-  }, [currentTime, theme]);
+  }, [currentTime, theme, scrollOffset]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -256,12 +332,12 @@ export function AnimationTimeline() {
         ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       }
 
-      drawTimeline(canvas, currentTime, colors);
+      drawTimeline(canvas, currentTime, colors, scrollOffset);
     });
 
     resizeObserver.observe(canvas);
     return () => resizeObserver.disconnect();
-  }, [currentTime, theme]);
+  }, [currentTime, theme, scrollOffset]);
 
   return (
     <div className="h-full border-t border-border bg-muted">
@@ -283,13 +359,34 @@ export function AnimationTimeline() {
           </div>
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full cursor-pointer"
+      <div
+        ref={scrollContainerRef}
+        className="relative w-full overflow-x-auto overflow-y-hidden"
         style={{ height: `${TIMELINE_HEIGHT}px` }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-      />
+        onScroll={handleScroll}
+      >
+        {/* Virtual scrolling div to enable horizontal scrolling */}
+        <div
+          style={{
+            width: `${VIRTUAL_WIDTH}px`,
+            height: '1px',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none',
+          }}
+        />
+        <canvas
+          ref={canvasRef}
+          className="absolute top-0 left-0 h-full cursor-pointer"
+          style={{
+            height: `${TIMELINE_HEIGHT}px`,
+            width: '100%',
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+        />
+      </div>
     </div>
   );
 }
