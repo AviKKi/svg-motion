@@ -54,7 +54,7 @@ export function AnimationTimeline() {
   const [scrollOffset, setScrollOffset] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth);
-  const { currentTime, seek } = useAnimationStore();
+  const { currentTime, seek, animations } = useAnimationStore();
   const { theme } = useThemeStore();
   const colors = theme === 'dark' ? darkColors : lightColors;
 
@@ -147,9 +147,16 @@ export function AnimationTimeline() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      drawTimeline(canvas, currentTime, colors, scrollOffset, virtualWidth);
+      drawTimeline(
+        canvas,
+        currentTime,
+        colors,
+        scrollOffset,
+        virtualWidth,
+        animations
+      );
     }
-  }, [currentTime, theme, scrollOffset, virtualWidth]);
+  }, [currentTime, theme, scrollOffset, virtualWidth, animations]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -170,12 +177,19 @@ export function AnimationTimeline() {
         ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       }
 
-      drawTimeline(canvas, currentTime, colors, scrollOffset, virtualWidth);
+      drawTimeline(
+        canvas,
+        currentTime,
+        colors,
+        scrollOffset,
+        virtualWidth,
+        animations
+      );
     });
 
     resizeObserver.observe(canvas);
     return () => resizeObserver.disconnect();
-  }, [currentTime, theme, scrollOffset, virtualWidth, canvasWidth]);
+  }, [currentTime, theme, scrollOffset, virtualWidth, canvasWidth, animations]);
 
   return (
     <div className="h-full border-t border-border bg-muted">

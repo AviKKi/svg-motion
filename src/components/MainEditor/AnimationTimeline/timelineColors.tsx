@@ -7,6 +7,9 @@ export type TimelineColors = {
   playhead: string;
   playheadHandle: string;
   shadow: string;
+  keyframeLine: string;
+  keyframeDiamond: string;
+  keyframeLabel: string;
 };
 
 export const lightColors: TimelineColors = {
@@ -18,6 +21,9 @@ export const lightColors: TimelineColors = {
   playhead: '#111827', // gray-900
   playheadHandle: '#111827', // gray-900
   shadow: 'rgba(0, 0, 0, 0.1)',
+  keyframeLine: '#7a40ed', // blue-500
+  keyframeDiamond: '#7a40ed', // blue-600
+  keyframeLabel: '#7a40ed', // blue-700
 };
 
 export const darkColors: TimelineColors = {
@@ -29,4 +35,7 @@ export const darkColors: TimelineColors = {
   playhead: '#e5e7eb', // gray-200
   playheadHandle: '#111827', // gray-200
   shadow: 'rgba(0, 0, 0, 0.35)',
+  keyframeLine: '#60a5fa', // blue-400
+  keyframeDiamond: '#3b82f6', // blue-500
+  keyframeLabel: '#93c5fd', // blue-300
 };

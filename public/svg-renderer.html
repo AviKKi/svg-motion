@@ -65,6 +65,40 @@
         sendMessage('svg-loaded');
       }
 
+      // Helper function to process ease configurations
+      function processEaseConfig(ease) {
+        if (typeof ease === 'object' && ease.type === 'spring') {
+          return createSpring(ease);
+        }
+        return ease;
+      }
+
+      // Helper function to process animation parameters
+      function processAnimationParams(params) {
+        const processedParams = { ...params };
+        
+        // Process each property that might have ease configurations
+        Object.keys(processedParams).forEach(key => {
+          const value = processedParams[key];
+          
+          if (Array.isArray(value)) {
+            // Handle keyframe arrays
+            processedParams[key] = value.map(keyframe => ({
+              ...keyframe,
+              ease: keyframe.ease ? processEaseConfig(keyframe.ease) : keyframe.ease
+            }));
+          } else if (typeof value === 'object' && value.ease) {
+            // Handle single keyframe objects
+            processedParams[key] = {
+              ...value,
+              ease: processEaseConfig(value.ease)
+            };
+          }
+        });
+        
+        return processedParams;
+      }
+
       // Create animation timeline
       function createAnimationTimeline(animations) {
         // Clear existing timeline
@@ -87,6 +121,9 @@
             currentTime = anim.currentTime;
             sendMessage('time-update', { currentTime });
           },
+          onLoop: function (){
+            currentTimeline.restart();
+          },
           onComplete: function () {
             sendMessage('animation-complete');
           },
@@ -96,9 +133,7 @@
         animations.forEach(animation => {
           currentTimeline.add(
             animation.targets,
-            {
-              ...animation.params,
-            },
+            processAnimationParams(animation.params),
             animation.position || 0
           );
         });

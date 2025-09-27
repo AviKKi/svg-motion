@@ -1,9 +1,217 @@
 import { type TimelineColors } from './timelineColors';
+import { type Animation } from '@/stores/animationStore';
 import {
   TIMELINE_DURATION,
   TIMELINE_BAR_HEIGHT,
   PLAYHEAD_SIZE,
 } from './constants';
+
+// Helper function to extract duration from animation params
+function extractAnimationDuration(animation: Animation): number {
+  const params = animation.params;
+
+  // Check for direct duration property
+  if (typeof params.duration === 'number') {
+    return params.duration;
+  }
+
+  // Check for array of keyframes with durations
+  if (Array.isArray(params.duration)) {
+    return params.duration.reduce(
+      (total: number, dur: number) => total + dur,
+      0
+    );
+  }
+
+  // Check for property-specific durations (e.g., rotate: [{ duration: 200 }, { duration: 800 }])
+  for (const [, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      const totalDuration = value.reduce((total, keyframe) => {
+        if (typeof keyframe === 'object' && keyframe.duration) {
+          return total + keyframe.duration;
+        }
+        return total;
+      }, 0);
+      if (totalDuration > 0) return totalDuration;
+    }
+  }
+
+  // Default duration if none found
+  return 1000;
+}
+
+// Helper function to extract animated properties with their keyframes
+function extractAnimatedProperties(animation: Animation): Array<{
+  property: string;
+  keyframes: Array<{ time: number; duration: number }>;
+}> {
+  const params = animation.params;
+  const properties: Array<{
+    property: string;
+    keyframes: Array<{ time: number; duration: number }>;
+  }> = [];
+
+  // Common animatable properties
+  const animatableProps = [
+    'rotate',
+    'scale',
+    'translateX',
+    'translateY',
+    'opacity',
+    'x',
+    'y',
+    'width',
+    'height',
+  ];
+
+  for (const prop of animatableProps) {
+    if (params[prop] !== undefined) {
+      const keyframes: Array<{ time: number; duration: number }> = [];
+      const propValue = params[prop];
+
+      if (Array.isArray(propValue)) {
+        // Handle array of keyframes
+        let currentTime = animation.position || 0;
+
+        propValue.forEach(keyframe => {
+          if (typeof keyframe === 'object' && keyframe !== null) {
+            const duration = keyframe.duration || 1000;
+            const delay = keyframe.delay || 0;
+
+            keyframes.push({
+              time: currentTime + delay,
+              duration: duration,
+            });
+
+            currentTime += delay + duration;
+          }
+        });
+      } else {
+        // Handle single value - create a single keyframe
+        const duration = params.duration || 1000;
+        keyframes.push({
+          time: animation.position || 0,
+          duration: duration,
+        });
+      }
+
+      if (keyframes.length > 0) {
+        properties.push({
+          property: prop,
+          keyframes: keyframes,
+        });
+      }
+    }
+  }
+
+  return properties.length > 0
+    ? properties
+    : [
+        {
+          property: 'animation',
+          keyframes: [
+            {
+              time: animation.position || 0,
+              duration: extractAnimationDuration(animation),
+            },
+          ],
+        },
+      ];
+}
+
+// Draw diamond shape (square rotated 45 degrees)
+function drawDiamond(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  fillColor: string
+) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4); // Rotate 45 degrees
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(-size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+// Draw keyframes for animations
+function drawKeyframes(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  timelineY: number,
+  animations: Animation[],
+  colors: TimelineColors,
+  scrollOffset: number = 0,
+  virtualWidth: number
+) {
+  const keyframeY = timelineY + TIMELINE_BAR_HEIGHT + 35; // Position below timeline bar
+  const diamondSize = 8;
+  const lineHeight = 20;
+  let currentRowIndex = 0;
+
+  animations.forEach(animation => {
+    const properties = extractAnimatedProperties(animation);
+
+    properties.forEach(propertyData => {
+      const { property, keyframes } = propertyData;
+      const currentKeyframeY = keyframeY + currentRowIndex * lineHeight;
+
+      // Draw each keyframe segment for this property
+      keyframes.forEach((keyframe, keyframeIndex) => {
+        const startTime = keyframe.time;
+        const endTime = startTime + keyframe.duration;
+
+        // Calculate pixel positions
+        const startX =
+          (startTime / TIMELINE_DURATION) * virtualWidth - scrollOffset;
+        const endX =
+          (endTime / TIMELINE_DURATION) * virtualWidth - scrollOffset;
+
+        // Only draw if keyframe is visible in viewport
+        if (endX >= -50 && startX <= width + 50) {
+          // Draw line connecting start and end
+          ctx.strokeStyle = colors.keyframeLine;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(startX, currentKeyframeY);
+          ctx.lineTo(endX, currentKeyframeY);
+          ctx.stroke();
+
+          // Draw start diamond
+          drawDiamond(
+            ctx,
+            startX,
+            currentKeyframeY,
+            diamondSize,
+            colors.keyframeDiamond
+          );
+
+          // Draw end diamond
+          drawDiamond(
+            ctx,
+            endX,
+            currentKeyframeY,
+            diamondSize,
+            colors.keyframeDiamond
+          );
+
+          // Draw property label only for the first keyframe of each property
+          if (keyframeIndex === 0) {
+            ctx.fillStyle = colors.keyframeLabel;
+            ctx.font =
+              '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(property, startX + diamondSize + 4, currentKeyframeY);
+          }
+        }
+      });
+
+      currentRowIndex++;
+    });
+  });
+}
 
 function drawGridLines(
   ctx: CanvasRenderingContext2D,
@@ -196,7 +404,8 @@ function drawTimeline(
   currentTime: number,
   colors: TimelineColors,
   scrollOffset: number = 0,
-  virtualWidth: number
+  virtualWidth: number,
+  animations: Animation[] = []
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -227,6 +436,18 @@ function drawTimeline(
   );
   drawTimeLabels(ctx, width, timelineY, colors, scrollOffset, virtualWidth);
   drawTickMarks(ctx, width, timelineY, colors, scrollOffset, virtualWidth);
+
+  // Draw keyframes
+  drawKeyframes(
+    ctx,
+    width,
+    timelineY,
+    animations,
+    colors,
+    scrollOffset,
+    virtualWidth
+  );
+
   drawPlayhead(
     ctx,
     width,
@@ -245,5 +466,6 @@ export {
   drawTimeLabels,
   drawTickMarks,
   drawPlayhead,
+  drawKeyframes,
   drawTimeline,
 };
