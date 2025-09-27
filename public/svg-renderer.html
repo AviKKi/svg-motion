@@ -6,31 +6,36 @@
     <title>SVG Animation Renderer</title>
     <script src="https://unpkg.com/animejs@3.2.1/lib/anime.min.js"></script>
     <style>
+      html,
       body {
         margin: 0;
         padding: 0;
         width: 100%;
-        height: 100vh;
+        height: 100%;
+        overflow: hidden; /* prevent scrollbars on both axes */
+      }
+
+      body {
         display: flex;
         align-items: center;
         justify-content: center;
         background: transparent;
-        overflow: hidden;
       }
 
       #svg-container {
-        max-width: 100%;
-        max-height: 100%;
+        width: 100vw;
+        height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
+        overflow: hidden; /* clip any potential overflow from strokes/filters */
+        background: transparent;
       }
 
       svg {
-        max-width: 100%;
-        max-height: 100%;
-        width: auto;
-        height: auto;
+        display: block;
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
@@ -61,6 +66,43 @@
         svgContent = content;
         const container = document.getElementById('svg-container');
         container.innerHTML = content;
+
+        // Ensure the injected SVG scales to fit the viewport without overflow
+        const svgEl = container.querySelector('svg');
+        if (svgEl) {
+          svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgEl.style.width = '100%';
+          svgEl.style.height = '100%';
+          svgEl.style.maxWidth = '100%';
+          svgEl.style.maxHeight = '100%';
+          svgEl.style.display = 'block';
+
+          // Provide a viewBox if missing so aspect ratio is maintained
+          if (!svgEl.hasAttribute('viewBox')) {
+            const widthAttr = svgEl.getAttribute('width');
+            const heightAttr = svgEl.getAttribute('height');
+            let w = parseFloat(widthAttr || '');
+            let h = parseFloat(heightAttr || '');
+
+            if (!w || !h || Number.isNaN(w) || Number.isNaN(h)) {
+              try {
+                const bbox = svgEl.getBBox();
+                if (bbox && bbox.width && bbox.height) {
+                  svgEl.setAttribute(
+                    'viewBox',
+                    `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`
+                  );
+                } else {
+                  svgEl.setAttribute('viewBox', '0 0 100 100');
+                }
+              } catch (e) {
+                svgEl.setAttribute('viewBox', '0 0 100 100');
+              }
+            } else {
+              svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+            }
+          }
+        }
 
         // Notify parent that SVG is loaded
         sendMessage('svg-loaded');
