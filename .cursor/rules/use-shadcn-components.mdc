@@ -1,0 +1,5 @@
+---
+description: Install and use shadcn components whenever possible
+globs:
+alwaysApply: true
+---
