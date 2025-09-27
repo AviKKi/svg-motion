@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -42,27 +42,27 @@
         animate,
         createSpring,
         createTimeline,
-      } from "https://cdn.jsdelivr.net/npm/animejs/+esm";
+      } from 'https://cdn.jsdelivr.net/npm/animejs/+esm';
       // console.log(animate);
       let currentTimeline = null;
       let currentAnimations = [];
-      let svgContent = "";
+      let svgContent = '';
       let isPlaying = false;
       let currentTime = 0;
 
       // Communication with parent window
       function sendMessage(type, data = {}) {
-        window.parent.postMessage({ type, ...data }, "*");
+        window.parent.postMessage({ type, ...data }, '*');
       }
 
       // Initialize SVG content
       function setSvgContent(content) {
         svgContent = content;
-        const container = document.getElementById("svg-container");
+        const container = document.getElementById('svg-container');
         container.innerHTML = content;
 
         // Notify parent that SVG is loaded
-        sendMessage("svg-loaded");
+        sendMessage('svg-loaded');
       }
 
       // Create animation timeline
@@ -85,15 +85,15 @@
           loop: true,
           onUpdate: function (anim) {
             currentTime = anim.currentTime;
-            sendMessage("time-update", { currentTime });
+            sendMessage('time-update', { currentTime });
           },
           onComplete: function () {
-            sendMessage("animation-complete");
+            sendMessage('animation-complete');
           },
         });
 
         // Add animations to timeline
-        animations.forEach((animation) => {
+        animations.forEach(animation => {
           currentTimeline.add(
             animation.targets,
             {
@@ -102,11 +102,10 @@
             animation.position || 0
           );
         });
-        
 
         // Get total duration and send to parent
         if (currentTimeline.duration) {
-          sendMessage("duration-update", {
+          sendMessage('duration-update', {
             duration: currentTimeline.duration,
           });
         }
@@ -117,7 +116,7 @@
         if (currentTimeline) {
           currentTimeline.play();
           isPlaying = true;
-          sendMessage("play-state-changed", { isPlaying: true });
+          sendMessage('play-state-changed', { isPlaying: true });
         }
       }
 
@@ -125,7 +124,7 @@
         if (currentTimeline) {
           currentTimeline.pause();
           isPlaying = false;
-          sendMessage("play-state-changed", { isPlaying: false });
+          sendMessage('play-state-changed', { isPlaying: false });
         }
       }
 
@@ -133,7 +132,7 @@
         if (currentTimeline) {
           currentTimeline.seek(time);
           currentTime = time;
-          sendMessage("time-update", { currentTime: time });
+          sendMessage('time-update', { currentTime: time });
         }
       }
 
@@ -141,41 +140,41 @@
         if (currentTimeline) {
           currentTimeline.restart();
           currentTime = 0;
-          sendMessage("time-update", { currentTime: 0 });
+          sendMessage('time-update', { currentTime: 0 });
         }
       }
 
       // Message handler
-      window.addEventListener("message", function (event) {
+      window.addEventListener('message', function (event) {
         const { type, data } = event.data;
 
         switch (type) {
-          case "set-svg-content":
+          case 'set-svg-content':
             setSvgContent(data.content);
             break;
 
-          case "set-animations":
+          case 'set-animations':
             createAnimationTimeline(data.animations);
             break;
 
-          case "play":
+          case 'play':
             play();
             break;
 
-          case "pause":
+          case 'pause':
             pause();
             break;
 
-          case "seek":
+          case 'seek':
             seek(data.time);
             break;
 
-          case "restart":
+          case 'restart':
             restart();
             break;
 
-          case "get-state":
-            sendMessage("state-response", {
+          case 'get-state':
+            sendMessage('state-response', {
               isPlaying,
               currentTime,
               duration: currentTimeline ? currentTimeline.duration : 0,
@@ -185,7 +184,7 @@
       });
 
       // Initialize
-      sendMessage("iframe-ready");
+      sendMessage('iframe-ready');
     </script>
   </body>
 </html>

@@ -2,10 +2,10 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from '@/components/ui/resizable'
-import { ChatWindow } from './ChatWindow'
-import { SvgPreview } from './SvgPreview'
-import { AnimationTimeline } from './AnimationTimeline'
+} from '@/components/ui/resizable';
+import { ChatWindow } from './ChatWindow';
+import { SvgPreview } from './SvgPreview';
+import { AnimationTimeline } from './AnimationTimeline';
 
 export function MainContent() {
   return (
@@ -18,23 +18,23 @@ export function MainContent() {
             <ResizablePanel defaultSize={50} minSize={20}>
               <ChatWindow />
             </ResizablePanel>
-            
+
             <ResizableHandle withHandle />
-            
+
             {/* SVG Preview */}
             <ResizablePanel defaultSize={50} minSize={20}>
               <SvgPreview />
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
-        
+
         <ResizableHandle withHandle />
-        
+
         {/* Animation Timeline */}
         <ResizablePanel defaultSize={25} minSize={15}>
           <AnimationTimeline />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
-  )
+  );
 }

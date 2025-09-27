@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Key } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react';
+import { Key } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,32 +8,36 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ApiKeyDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSubmit: (apiKey: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (apiKey: string) => void;
 }
 
-export function ApiKeyDialog({ open, onOpenChange, onSubmit }: ApiKeyDialogProps) {
-  const [apiKey, setApiKey] = useState('')
+export function ApiKeyDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+}: ApiKeyDialogProps) {
+  const [apiKey, setApiKey] = useState('');
 
   const handleSubmit = () => {
     if (apiKey.trim()) {
-      onSubmit(apiKey.trim())
-      setApiKey('')
+      onSubmit(apiKey.trim());
+      setApiKey('');
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setApiKey('')
+      setApiKey('');
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -47,7 +51,7 @@ export function ApiKeyDialog({ open, onOpenChange, onSubmit }: ApiKeyDialogProps
             Enter your OpenRouter API key to enable AI-powered SVG animations.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="api-key">API Key</Label>
@@ -56,10 +60,10 @@ export function ApiKeyDialog({ open, onOpenChange, onSubmit }: ApiKeyDialogProps
               type="password"
               placeholder="Enter your OpenRouter API key"
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => {
+              onChange={e => setApiKey(e.target.value)}
+              onKeyDown={e => {
                 if (e.key === 'Enter') {
-                  handleSubmit()
+                  handleSubmit();
                 }
               }}
             />
@@ -76,5 +80,5 @@ export function ApiKeyDialog({ open, onOpenChange, onSubmit }: ApiKeyDialogProps
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

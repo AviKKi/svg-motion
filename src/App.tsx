@@ -1,7 +1,7 @@
-import { MainEditor } from '@/components/MainEditor'
+import { MainEditor } from '@/components/MainEditor';
 
 function App() {
-  return <MainEditor />
+  return <MainEditor />;
 }
 
-export default App
+export default App;
