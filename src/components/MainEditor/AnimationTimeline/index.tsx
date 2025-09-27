@@ -5,6 +5,7 @@ import { useGestureDetection } from '@/hooks/useGestureDetection';
 import { Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { darkColors, lightColors } from './timelineColors';
+import { SVGRendererManager } from '@/lib/SVGRendererManager';
 import { drawTimeline } from './canvasDrawUtils';
 import {
   DEFAULT_ZOOM,
@@ -32,7 +33,15 @@ function TimelineHeader() {
         <Button
           className="h-7 w-7"
           size="icon"
-          onClick={() => (isPlaying ? pause() : play())}
+          onClick={() => {
+            if (isPlaying) {
+              pause();
+              SVGRendererManager.pause();
+            } else {
+              play();
+              SVGRendererManager.play();
+            }
+          }}
         >
           {isPlaying ? (
             <Pause width={14} height={14} />
@@ -72,6 +81,7 @@ export function AnimationTimeline() {
       const clampedTime = Math.max(0, Math.min(TIMELINE_DURATION, newTime));
 
       seek(clampedTime);
+      SVGRendererManager.seek(clampedTime);
     },
     [seek, scrollOffset, virtualWidth]
   );

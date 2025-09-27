@@ -135,6 +135,50 @@ function drawDiamond(
   ctx.restore();
 }
 
+// Helper function to draw text with background
+function drawTextWithBackground(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  textColor: string,
+  backgroundColor: string,
+  padding: number = 2
+) {
+  // Measure text
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+  const textHeight = 12; // Approximate height for 11px font
+
+  // Draw background rectangle
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(
+    x - padding,
+    y - textHeight / 2 - padding,
+    textWidth + padding * 2,
+    textHeight + padding * 2
+  );
+
+  // Draw text
+  ctx.fillStyle = textColor;
+  ctx.fillText(text, x, y);
+
+  return {
+    left: x - padding,
+    right: x + textWidth + padding,
+    top: y - textHeight / 2 - padding,
+    bottom: y + textHeight / 2 + padding,
+  };
+}
+
+// Store label positions to break grid lines
+interface LabelPosition {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 // Draw keyframes for animations
 function drawKeyframes(
   ctx: CanvasRenderingContext2D,
@@ -144,11 +188,12 @@ function drawKeyframes(
   colors: TimelineColors,
   scrollOffset: number = 0,
   virtualWidth: number
-) {
+): LabelPosition[] {
   const keyframeY = timelineY + TIMELINE_BAR_HEIGHT + 35; // Position below timeline bar
   const diamondSize = 8;
   const lineHeight = 20;
   let currentRowIndex = 0;
+  const labelPositions: LabelPosition[] = [];
 
   animations.forEach(animation => {
     const properties = extractAnimatedProperties(animation);
@@ -198,12 +243,22 @@ function drawKeyframes(
 
           // Draw property label only for the first keyframe of each property
           if (keyframeIndex === 0) {
-            ctx.fillStyle = colors.keyframeLabel;
             ctx.font =
               '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText(property, startX + diamondSize + 4, currentKeyframeY);
+
+            const labelPosition = drawTextWithBackground(
+              ctx,
+              property,
+              startX + diamondSize + 4,
+              currentKeyframeY,
+              colors.keyframeLabel,
+              colors.background,
+              3
+            );
+
+            labelPositions.push(labelPosition);
           }
         }
       });
@@ -211,6 +266,8 @@ function drawKeyframes(
       currentRowIndex++;
     });
   });
+
+  return labelPositions;
 }
 
 function drawGridLines(
@@ -220,7 +277,8 @@ function drawGridLines(
   timelineY: number,
   colors: TimelineColors,
   scrollOffset: number = 0,
-  virtualWidth: number
+  virtualWidth: number,
+  labelPositions: LabelPosition[] = []
 ) {
   ctx.lineWidth = 1;
   const pixelsPerSecond = virtualWidth / (TIMELINE_DURATION / 1000); // Calculate based on virtual width
@@ -232,6 +290,25 @@ function drawGridLines(
   const startSecond = Math.floor(startTime / 1000);
   const endSecond = Math.ceil(endTime / 1000) + 1;
 
+  // Helper function to check if a line intersects with any label
+  const lineIntersectsLabel = (
+    lineX: number,
+    lineY1: number,
+    lineY2: number
+  ): LabelPosition | null => {
+    for (const label of labelPositions) {
+      if (
+        lineX >= label.left &&
+        lineX <= label.right &&
+        lineY1 <= label.bottom &&
+        lineY2 >= label.top
+      ) {
+        return label;
+      }
+    }
+    return null;
+  };
+
   for (let i = startSecond; i <= Math.min(endSecond, 6); i++) {
     const x = i * pixelsPerSecond - scrollOffset;
 
@@ -239,20 +316,67 @@ function drawGridLines(
     if (x >= -1 && x <= width + 1) {
       // Major line
       ctx.strokeStyle = colors.gridMajor;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
+      const intersectingLabel = lineIntersectsLabel(x, 0, height);
+
+      if (intersectingLabel) {
+        // Draw line in segments, breaking around the label
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, intersectingLabel.top);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, intersectingLabel.bottom);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      } else {
+        // Draw full line
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
 
       // Minor grid lines (0.2s intervals)
       ctx.strokeStyle = colors.gridMinor;
       for (let j = 1; j < 5; j++) {
         const minorX = x + (j * pixelsPerSecond) / 5;
         if (minorX >= -1 && minorX <= width + 1) {
-          ctx.beginPath();
-          ctx.moveTo(minorX, timelineY - 10);
-          ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10);
-          ctx.stroke();
+          const minorIntersectingLabel = lineIntersectsLabel(
+            minorX,
+            timelineY - 10,
+            timelineY + TIMELINE_BAR_HEIGHT + 10
+          );
+
+          if (minorIntersectingLabel) {
+            // Draw minor line in segments, breaking around the label
+            ctx.beginPath();
+            ctx.moveTo(minorX, timelineY - 10);
+            ctx.lineTo(
+              minorX,
+              Math.min(
+                minorIntersectingLabel.top,
+                timelineY + TIMELINE_BAR_HEIGHT + 10
+              )
+            );
+            ctx.stroke();
+
+            if (
+              minorIntersectingLabel.bottom <
+              timelineY + TIMELINE_BAR_HEIGHT + 10
+            ) {
+              ctx.beginPath();
+              ctx.moveTo(minorX, minorIntersectingLabel.bottom);
+              ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10);
+              ctx.stroke();
+            }
+          } else {
+            // Draw full minor line
+            ctx.beginPath();
+            ctx.moveTo(minorX, timelineY - 10);
+            ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10);
+            ctx.stroke();
+          }
         }
       }
     }
@@ -416,7 +540,18 @@ function drawTimeline(
   // Clear canvas
   ctx.clearRect(0, 0, width, height);
 
-  // Draw all components with scroll offset
+  // First, draw keyframes to get label positions
+  const labelPositions = drawKeyframes(
+    ctx,
+    width,
+    timelineY,
+    animations,
+    colors,
+    scrollOffset,
+    virtualWidth
+  );
+
+  // Draw grid lines with label positions to break lines appropriately
   drawGridLines(
     ctx,
     width,
@@ -424,8 +559,10 @@ function drawTimeline(
     timelineY,
     colors,
     scrollOffset,
-    virtualWidth
+    virtualWidth,
+    labelPositions
   );
+
   drawTimelineBar(
     ctx,
     width,
@@ -437,7 +574,7 @@ function drawTimeline(
   drawTimeLabels(ctx, width, timelineY, colors, scrollOffset, virtualWidth);
   drawTickMarks(ctx, width, timelineY, colors, scrollOffset, virtualWidth);
 
-  // Draw keyframes
+  // Redraw keyframes on top to ensure they're visible
   drawKeyframes(
     ctx,
     width,

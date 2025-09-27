@@ -35,23 +35,15 @@ interface AnimationState extends AnimationStoreState {
   seek: (time: number) => void;
 }
 
-// const initialState: AnimationStoreState = {
-//   svgUri: '',
-//   svgContent: '',
-//   svgName: '',
-//   currentTime: 0,
-//   isPlaying: false,
-//   animations: [],
-// }
-/**
- * 
- * here are a few updates, based on format of
-animation, a single animation can have multiple types of animation, x, rotate, y etc.
-
-It is grouped based on selector not a single animation type; so with single animation you can draw multiple rows
-
-Also for a single property along with start and end, we can have any number of keyframes as this is 
- */
+// @ts-ignore no-unused-vars
+const initialState: AnimationStoreState = {
+  svgUri: '',
+  svgContent: '',
+  svgName: '',
+  currentTime: 0,
+  isPlaying: false,
+  animations: [],
+};
 // Quick-swappable test state to validate animation plumbing
 export const testState: AnimationStoreState = {
   svgUri: '/sampleSvg/phone-call.svg',
@@ -62,16 +54,15 @@ export const testState: AnimationStoreState = {
   isPlaying: false,
   animations: [
     {
-      targets: '.feather-phone-call',
+      targets: 'svg',
       params: {
         rotate: [
-          { to: 0, ease: 'inOut(3)', duration: 200 },
-          { to: 360, ease: { type: 'spring', stiffness: 300 } },
+          { to: 30, ease: 'easeInOut', duration: 200 },
+          { to: 0, ease: 'easeInOut', duration: 200 },
+          { to: 30, ease: 'easeInOut', duration: 200 },
+          { to: 0, ease: 'easeInOut', duration: 200 },
         ],
-        x: [
-          { to: 0, duration: 200, delay: 200 },
-          { to: 100, duration: 200, delay: 200 },
-        ],
+        x: [{ to: 1, duration: 200, delay: 800 }],
       },
       position: 0,
     },

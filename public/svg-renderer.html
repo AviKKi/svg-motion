@@ -49,6 +49,7 @@
       let svgContent = '';
       let isPlaying = false;
       let currentTime = 0;
+      let ignoreNextTimeUpdate = false; // suppress echo after external seek
 
       // Communication with parent window
       function sendMessage(type, data = {}) {
@@ -119,7 +120,16 @@
           loop: true,
           onUpdate: function (anim) {
             currentTime = anim.currentTime;
-            sendMessage('time-update', { currentTime });
+            // Skip one echo right after an external seek
+            if (ignoreNextTimeUpdate) {
+              ignoreNextTimeUpdate = false;
+              return;
+            }
+
+            // Only emit while playing
+            if (isPlaying) {
+              sendMessage('time-update', { currentTime });
+            }
           },
           onLoop: function (){
             currentTimeline.restart();
@@ -165,9 +175,11 @@
 
       function seek(time) {
         if (currentTimeline) {
+          // external seek -> suppress next onUpdate echo
+          ignoreNextTimeUpdate = true;
           currentTimeline.seek(time);
           currentTime = time;
-          sendMessage('time-update', { currentTime: time });
+          // do not send time-update here; parent already knows
         }
       }
 

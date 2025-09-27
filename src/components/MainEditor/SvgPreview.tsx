@@ -2,6 +2,7 @@ import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useRef } from 'react';
 import { useAnimationStore } from '@/stores/animationStore';
+import { SVGRendererManager } from '@/lib/SVGRendererManager';
 
 const SAMPLE_SVGS = [{ name: 'Phone Call', path: '/sampleSvg/phone-call.svg' }];
 
@@ -13,10 +14,6 @@ export function SvgPreview({}: SvgPreviewProps) {
     svgContent,
     svgUri,
     svgName,
-    animations,
-    isPlaying,
-    currentTime,
-    setCurrentTime,
     setSvgContent,
     setSvgUri,
     setSvgName,
@@ -27,86 +24,11 @@ export function SvgPreview({}: SvgPreviewProps) {
     null
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [iframeReady, setIframeReady] = useState(false);
   const hasSvg = Boolean(svgUri || svgContent);
-  // Handle iframe communication
+  // Dispose renderer manager on unmount
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow) return;
-
-      const { type, currentTime: frameCurrentTime } = event.data;
-
-      switch (type) {
-        case 'iframe-ready':
-          setIframeReady(true);
-          break;
-        case 'time-update':
-          Math.abs(currentTime - frameCurrentTime) > 10 &&
-            setCurrentTime(frameCurrentTime);
-          break;
-        case 'play-state-changed':
-          // ideally iframe should not command play pause state, it should be handled by the parent
-          break;
-        case 'animation-complete':
-          // @todo Handle animation completion if needed
-          break;
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [setCurrentTime, currentTime]);
-
-  // Send SVG content to iframe when ready
-  useEffect(() => {
-    if (iframeReady && svgContent && iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        {
-          type: 'set-svg-content',
-          data: { content: svgContent },
-        },
-        '*'
-      );
-    }
-  }, [iframeReady, svgContent]);
-
-  // Send animations to iframe when they change
-  useEffect(() => {
-    if (iframeReady && iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        {
-          type: 'set-animations',
-          data: { animations },
-        },
-        '*'
-      );
-    }
-  }, [iframeReady, animations]);
-
-  // Send play/pause commands to iframe
-  useEffect(() => {
-    if (iframeReady && iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        {
-          type: isPlaying ? 'play' : 'pause',
-        },
-        '*'
-      );
-    }
-  }, [iframeReady, isPlaying]);
-
-  // Send seek commands to iframe
-  useEffect(() => {
-    if (iframeReady && iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        {
-          type: 'seek',
-          data: { time: currentTime },
-        },
-        '*'
-      );
-    }
-  }, [iframeReady, currentTime]);
+    return () => SVGRendererManager.dispose();
+  }, []);
 
   // Load SVG content
   useEffect(() => {
@@ -190,6 +112,11 @@ export function SvgPreview({}: SvgPreviewProps) {
                 src="/svg-renderer.html"
                 className="w-full h-full border-0 bg-transparent"
                 title="SVG Animation Renderer"
+                onLoad={() => {
+                  if (iframeRef.current) {
+                    SVGRendererManager.init(iframeRef.current);
+                  }
+                }}
                 sandbox="allow-scripts allow-same-origin"
               />
             ) : (
