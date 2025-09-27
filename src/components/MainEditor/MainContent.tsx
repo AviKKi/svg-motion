@@ -7,21 +7,7 @@ import { ChatWindow } from './ChatWindow'
 import { SvgPreview } from './SvgPreview'
 import { AnimationTimeline } from './AnimationTimeline'
 
-interface MainContentProps {
-  svgFile: File | null
-  selectedSampleSvg: string | null
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onSampleSvgSelect: (svgPath: string) => void
-  onClearSvg: () => void
-}
-
-export function MainContent({ 
-  svgFile, 
-  selectedSampleSvg, 
-  onFileChange, 
-  onSampleSvgSelect, 
-  onClearSvg 
-}: MainContentProps) {
+export function MainContent() {
   return (
     <div className="flex-1 flex flex-col">
       <ResizablePanelGroup direction="vertical" className="flex-1">
@@ -37,13 +23,7 @@ export function MainContent({
             
             {/* SVG Preview */}
             <ResizablePanel defaultSize={50} minSize={20}>
-              <SvgPreview
-                svgFile={svgFile}
-                selectedSampleSvg={selectedSampleSvg}
-                onFileChange={onFileChange}
-                onSampleSvgSelect={onSampleSvgSelect}
-                onClearSvg={onClearSvg}
-              />
+              <SvgPreview />
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>

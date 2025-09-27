@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Animation Renderer</title>
+    <script src="https://unpkg.com/animejs@3.2.1/lib/anime.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      #svg-container {
+        max-width: 100%;
+        max-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      svg {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="svg-container"></div>
+
+    <script type="module">
+      import {
+        animate,
+        createSpring,
+        createTimeline,
+      } from "https://cdn.jsdelivr.net/npm/animejs/+esm";
+      // console.log(animate);
+      let currentTimeline = null;
+      let currentAnimations = [];
+      let svgContent = "";
+      let isPlaying = false;
+      let currentTime = 0;
+
+      // Communication with parent window
+      function sendMessage(type, data = {}) {
+        window.parent.postMessage({ type, ...data }, "*");
+      }
+
+      // Initialize SVG content
+      function setSvgContent(content) {
+        svgContent = content;
+        const container = document.getElementById("svg-container");
+        container.innerHTML = content;
+
+        // Notify parent that SVG is loaded
+        sendMessage("svg-loaded");
+      }
+
+      // Create animation timeline
+      function createAnimationTimeline(animations) {
+        // Clear existing timeline
+        if (currentTimeline) {
+          currentTimeline.pause();
+          currentTimeline = null;
+        }
+
+        currentAnimations = animations;
+
+        if (!animations || animations.length === 0) {
+          return;
+        }
+
+        // Create new timeline
+        currentTimeline = createTimeline({
+          autoplay: true,
+          loop: true,
+          onUpdate: function (anim) {
+            currentTime = anim.currentTime;
+            sendMessage("time-update", { currentTime });
+          },
+          onComplete: function () {
+            sendMessage("animation-complete");
+          },
+        });
+
+        // Add animations to timeline
+        animations.forEach((animation) => {
+          currentTimeline.add(
+            animation.targets,
+            {
+              ...animation.params,
+            },
+            animation.position || 0
+          );
+        });
+        
+
+        // Get total duration and send to parent
+        if (currentTimeline.duration) {
+          sendMessage("duration-update", {
+            duration: currentTimeline.duration,
+          });
+        }
+      }
+
+      // Playback controls
+      function play() {
+        if (currentTimeline) {
+          currentTimeline.play();
+          isPlaying = true;
+          sendMessage("play-state-changed", { isPlaying: true });
+        }
+      }
+
+      function pause() {
+        if (currentTimeline) {
+          currentTimeline.pause();
+          isPlaying = false;
+          sendMessage("play-state-changed", { isPlaying: false });
+        }
+      }
+
+      function seek(time) {
+        if (currentTimeline) {
+          currentTimeline.seek(time);
+          currentTime = time;
+          sendMessage("time-update", { currentTime: time });
+        }
+      }
+
+      function restart() {
+        if (currentTimeline) {
+          currentTimeline.restart();
+          currentTime = 0;
+          sendMessage("time-update", { currentTime: 0 });
+        }
+      }
+
+      // Message handler
+      window.addEventListener("message", function (event) {
+        const { type, data } = event.data;
+
+        switch (type) {
+          case "set-svg-content":
+            setSvgContent(data.content);
+            break;
+
+          case "set-animations":
+            createAnimationTimeline(data.animations);
+            break;
+
+          case "play":
+            play();
+            break;
+
+          case "pause":
+            pause();
+            break;
+
+          case "seek":
+            seek(data.time);
+            break;
+
+          case "restart":
+            restart();
+            break;
+
+          case "get-state":
+            sendMessage("state-response", {
+              isPlaying,
+              currentTime,
+              duration: currentTimeline ? currentTimeline.duration : 0,
+            });
+            break;
+        }
+      });
+
+      // Initialize
+      sendMessage("iframe-ready");
+    </script>
+  </body>
+</html>

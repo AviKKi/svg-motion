@@ -1,14 +1,22 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { useAnimationStore } from '../../stores/animationStore'
 import { useThemeStore } from '../../stores/themeStore'
-import { Play } from 'lucide-react'
+import { Play, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const TIMELINE_HEIGHT = 80
 const TIMELINE_BAR_HEIGHT = 1
 const PLAYHEAD_SIZE = 16
 const TIMELINE_DURATION = 6000 // 6 seconds in ms
-const PIXELS_PER_SECOND = 100 // Scale factor
+
+function formatTime(timeMs: number): string {
+  const totalMs = Math.floor(timeMs)
+  const minutes = Math.floor(totalMs / 60000)
+  const seconds = Math.floor((totalMs % 60000) / 1000)
+  const milliseconds = Math.floor((totalMs % 1000) / 10) // Show only 2 decimal places for ms
+  
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`
+}
 
 type TimelineColors = {
   gridMajor: string
@@ -45,15 +53,16 @@ const darkColors: TimelineColors = {
 
 function drawGridLines(
   ctx: CanvasRenderingContext2D,
-  _width: number,
+  width: number,
   height: number,
   timelineY: number,
   colors: TimelineColors
 ) {
   ctx.lineWidth = 1
+  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000) // Calculate based on actual canvas width
   
   for (let i = 0; i <= 6; i++) {
-    const x = i * PIXELS_PER_SECOND
+    const x = i * pixelsPerSecond
     // Major line
     ctx.strokeStyle = colors.gridMajor
     ctx.beginPath()
@@ -64,7 +73,7 @@ function drawGridLines(
     // Minor grid lines (0.2s intervals)
     ctx.strokeStyle = colors.gridMinor
     for (let j = 1; j < 5; j++) {
-      const minorX = x + (j * PIXELS_PER_SECOND / 5)
+      const minorX = x + (j * pixelsPerSecond / 5)
       ctx.beginPath()
       ctx.moveTo(minorX, timelineY - 10)
       ctx.lineTo(minorX, timelineY + TIMELINE_BAR_HEIGHT + 10)
@@ -92,6 +101,7 @@ function drawTimelineBar(
 
 function drawTimeLabels(
   ctx: CanvasRenderingContext2D,
+  width: number,
   timelineY: number,
   colors: TimelineColors
 ) {
@@ -100,8 +110,10 @@ function drawTimeLabels(
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
   
+  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000) // Calculate based on actual canvas width
+  
   for (let i = 0; i <= 6; i++) {
-    const x = i * PIXELS_PER_SECOND
+    const x = i * pixelsPerSecond
     const label = i === 0 ? '0' : `${i}s`
     ctx.fillText(label, x, timelineY + TIMELINE_BAR_HEIGHT + 8)
   }
@@ -109,15 +121,17 @@ function drawTimeLabels(
 
 function drawTickMarks(
   ctx: CanvasRenderingContext2D,
+  width: number,
   timelineY: number,
   colors: TimelineColors
 ) {
   ctx.fillStyle = colors.tick
+  const pixelsPerSecond = width / (TIMELINE_DURATION / 1000) // Calculate based on actual canvas width
   
   for (let i = 0; i <= 6; i++) {
-    const x = i * PIXELS_PER_SECOND
+    const x = i * pixelsPerSecond
     for (let j = 1; j < 5; j++) {
-      const tickX = x + (j * PIXELS_PER_SECOND / 5)
+      const tickX = x + (j * pixelsPerSecond / 5)
       ctx.beginPath()
       ctx.arc(tickX, timelineY - 4, 1.5, 0, Math.PI * 2)
       ctx.fill()
@@ -182,14 +196,14 @@ function drawTimeline(
   // Draw all components
   drawGridLines(ctx, width, height, timelineY, colors)
   drawTimelineBar(ctx, width, PLAYHEAD_SIZE + 8, colors)
-  drawTimeLabels(ctx, timelineY, colors)
-  drawTickMarks(ctx, timelineY, colors)
+  drawTimeLabels(ctx, width, timelineY, colors)
+  drawTickMarks(ctx, width, timelineY, colors)
   drawPlayhead(ctx, width, height, timelineY+25, currentTime, colors)
 }
 
 export function AnimationTimeline() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { currentTime, seek } = useAnimationStore()
+  const { currentTime, isPlaying, seek, play, pause } = useAnimationStore()
   const { theme } = useThemeStore()
   const colors = theme === 'dark' ? darkColors : lightColors
 
@@ -244,7 +258,14 @@ export function AnimationTimeline() {
   return (
     <div className="h-full border-t border-border bg-muted">
       <div className="flex items-center justify-between py-2 border-b border-border px-2">
-        <Button className='h-7 w-7' size="icon"><Play width={14} height={14} /></Button>
+        <div className="flex items-center gap-3">
+          <Button className='h-7 w-7' size="icon" onClick={() => (isPlaying ? pause() : play())}>
+            {isPlaying ? <Pause width={14} height={14} /> : <Play width={14} height={14} />}
+          </Button>
+          <div className="text-sm font-mono text-muted-foreground">
+            {formatTime(currentTime)}
+          </div>
+        </div>
       </div>
       <canvas
         ref={canvasRef}
