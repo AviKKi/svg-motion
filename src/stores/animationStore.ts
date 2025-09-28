@@ -1,6 +1,6 @@
 // Spring configurations are now passed as plain objects to be serializable
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 
 export interface Animation {
   targets: any; // animejs.Targets
@@ -15,6 +15,7 @@ interface AnimationStoreState {
   currentTime: number; // ms offset of playhead
   isPlaying: boolean;
   animations: Animation[];
+  selectedSvgPath: string | null; // deterministic path of selected element in svg DOM
 }
 
 interface AnimationState extends AnimationStoreState {
@@ -33,6 +34,7 @@ interface AnimationState extends AnimationStoreState {
   pause: () => void;
   stop: () => void;
   seek: (time: number) => void;
+  setSelectedSvgPath: (path: string | null) => void;
 }
 
 // @ts-ignore no-unused-vars
@@ -43,6 +45,7 @@ const initialState: AnimationStoreState = {
   currentTime: 0,
   isPlaying: false,
   animations: [],
+  selectedSvgPath: null,
 };
 // Quick-swappable test state to validate animation plumbing
 export const testState: AnimationStoreState = {
@@ -67,85 +70,93 @@ export const testState: AnimationStoreState = {
       position: 0,
     },
   ],
+  selectedSvgPath: null,
 };
 export const useAnimationStore = create<AnimationState>()(
-  persist(
-    (set, _get) => ({
-      ...testState,
+  subscribeWithSelector(
+    persist(
+      (set, _get) => ({
+        ...testState,
 
-      setSvgUri: (uri: string) => {
-        set({ svgUri: uri });
-      },
+        setSvgUri: (uri: string) => {
+          set({ svgUri: uri });
+        },
 
-      setSvgContent: (content: string) => {
-        set({ svgContent: content });
-      },
+        setSvgContent: (content: string) => {
+          set({ svgContent: content });
+        },
 
-      setSvgName: (name: string) => {
-        set({ svgName: name });
-      },
+        setSvgName: (name: string) => {
+          set({ svgName: name });
+        },
 
-      clearSvg: () => {
-        set({ svgUri: '', svgContent: '', svgName: '' });
-      },
+        clearSvg: () => {
+          set({ svgUri: '', svgContent: '', svgName: '' });
+        },
 
-      setCurrentTime: (time: number) => {
-        set({ currentTime: time });
-      },
+        setCurrentTime: (time: number) => {
+          set({ currentTime: time });
+        },
 
-      setIsPlaying: (playing: boolean) => {
-        set({ isPlaying: playing });
-      },
+        setIsPlaying: (playing: boolean) => {
+          set({ isPlaying: playing });
+        },
 
-      addAnimation: (animation: Animation) => {
-        set(state => ({
-          animations: [...state.animations, animation],
-        }));
-      },
+        addAnimation: (animation: Animation) => {
+          set(state => ({
+            animations: [...state.animations, animation],
+          }));
+        },
 
-      removeAnimation: (index: number) => {
-        set(state => ({
-          animations: state.animations.filter((_, i) => i !== index),
-        }));
-      },
+        removeAnimation: (index: number) => {
+          set(state => ({
+            animations: state.animations.filter((_, i) => i !== index),
+          }));
+        },
 
-      updateAnimation: (index: number, animation: Partial<Animation>) => {
-        set(state => ({
-          animations: state.animations.map((anim, i) =>
-            i === index ? { ...anim, ...animation } : anim
-          ),
-        }));
-      },
+        updateAnimation: (index: number, animation: Partial<Animation>) => {
+          set(state => ({
+            animations: state.animations.map((anim, i) =>
+              i === index ? { ...anim, ...animation } : anim
+            ),
+          }));
+        },
 
-      clearAnimations: () => {
-        set({ animations: [] });
-      },
+        clearAnimations: () => {
+          set({ animations: [] });
+        },
 
-      play: () => {
-        set({ isPlaying: true });
-      },
+        play: () => {
+          set({ isPlaying: true });
+        },
 
-      pause: () => {
-        set({ isPlaying: false });
-      },
+        pause: () => {
+          set({ isPlaying: false });
+        },
 
-      stop: () => {
-        set({ isPlaying: false, currentTime: 0 });
-      },
+        stop: () => {
+          set({ isPlaying: false, currentTime: 0 });
+        },
 
-      seek: (time: number) => {
-        set({ currentTime: time });
-      },
-    }),
-    {
-      name: 'animation-storage',
-      // Only persist certain fields, not the entire state
-      partialize: state => ({
-        svgUri: state.svgUri,
-        svgContent: state.svgContent,
-        svgName: state.svgName,
-        animations: state.animations,
+        seek: (time: number) => {
+          set({ currentTime: time });
+        },
+
+        setSelectedSvgPath: (path: string | null) => {
+          set({ selectedSvgPath: path });
+        },
       }),
-    }
+      {
+        name: 'animation-storage',
+        // Only persist certain fields, not the entire state
+        partialize: state => ({
+          svgUri: state.svgUri,
+          svgContent: state.svgContent,
+          svgName: state.svgName,
+          animations: state.animations,
+          selectedSvgPath: state.selectedSvgPath,
+        }),
+      }
+    )
   )
 );

@@ -1,4 +1,5 @@
 import { useAnimationStore } from '@/stores/animationStore';
+import { shallow } from 'zustand/shallow';
 
 type NullableWindow = Window | null;
 
@@ -34,7 +35,7 @@ class _SVGRendererManager {
 
   private onMessage(event: MessageEvent) {
     if (event.source !== this.iframeWindow) return;
-    const { type, currentTime } = event.data || {};
+    const { type, currentTime, path } = event.data || {};
 
     switch (type) {
       case 'iframe-ready': {
@@ -61,6 +62,12 @@ class _SVGRendererManager {
         // Source of truth remains the store; ignore renderer-originated state changes
         break;
       }
+
+      case 'svg-element-selected': {
+        const { setSelectedSvgPath } = useAnimationStore.getState();
+        setSelectedSvgPath(path ?? null);
+        break;
+      }
     }
   }
 
@@ -75,7 +82,8 @@ class _SVGRendererManager {
           if (this.isReady) {
             this.postMessage({ type: 'set-animations', data: { animations } });
           }
-        }
+        },
+        { equalityFn: shallow }
       )
     );
 
@@ -98,6 +106,22 @@ class _SVGRendererManager {
         isPlaying => {
           if (this.isReady) {
             this.postMessage({ type: isPlaying ? 'play' : 'pause' });
+          }
+        }
+      )
+    );
+
+    // Sync selection both ways: when the app selection changes, instruct iframe to select
+    this.unsubscribeFns.push(
+      store.subscribe(
+        s => s.selectedSvgPath,
+        selectedPath => {
+          console.log('selectedPath', selectedPath);
+          if (this.isReady) {
+            this.postMessage({
+              type: 'select-svg-path',
+              data: { path: selectedPath },
+            });
           }
         }
       )

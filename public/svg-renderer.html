@@ -235,7 +235,7 @@
 
       // Message handler
       window.addEventListener('message', function (event) {
-        const { type, data } = event.data;
+        const { type, data } = event.data || {};
 
         switch (type) {
           case 'set-svg-content':
@@ -275,5 +275,6 @@
       // Initialize
       sendMessage('iframe-ready');
     </script>
+    <script src="./js/svgAnnotation.js"></script>
   </body>
 </html>
