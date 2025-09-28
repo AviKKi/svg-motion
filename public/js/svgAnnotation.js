@@ -297,7 +297,6 @@
   // Listen to commands from parent for selection sync
   window.addEventListener('message', function (event) {
     const { type, data } = event.data || {};
-    console.log('message', type, data);
     if (type === 'select-svg-path') {
       const path = data && data.path ? String(data.path) : null;
       if (!path) {

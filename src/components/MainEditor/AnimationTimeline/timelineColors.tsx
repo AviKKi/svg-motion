@@ -72,9 +72,9 @@ export const lightColors: TimelineColors = {
   playhead: '#111827', // gray-900
   playheadHandle: '#111827', // gray-900
   shadow: 'rgba(0, 0, 0, 0.1)',
-  keyframeLine: '#7a40ed', // blue-500
-  keyframeDiamond: '#7a40ed', // blue-600
-  keyframeLabel: '#7a40ed', // blue-700
+  keyframeLine: '#111111', // blue-500
+  keyframeDiamond: '#111111', // blue-600
+  keyframeLabel: '#111111', // blue-700
   background: oklchToHex(0.968, 0.007, 247.896), // --muted light theme: oklch(0.968 0.007 247.896)
 };
 

@@ -71,7 +71,6 @@ export function AnimationTimeline() {
 
   // Calculate virtual width based on zoom level
   const virtualWidth = BASE_VIRTUAL_WIDTH * zoomLevel;
-
   // Interactive elements for keyframes
   type InteractiveDiamond = {
     kind: 'start' | 'end';
@@ -99,8 +98,7 @@ export function AnimationTimeline() {
     // Build hit targets for diamonds and property lines
     const elements: Array<InteractiveDiamond | InteractiveLine> = [];
 
-    const keyframeBaseY =
-      TIMELINE_HEIGHT / 2 + TIMELINE_BAR_HEIGHT + 35 - TIMELINE_BAR_HEIGHT / 2;
+    const keyframeBaseY = TIMELINE_BAR_HEIGHT + TIMELINE_BAR_HEIGHT / 2 + 35;
     let currentRowIndex = 0;
 
     animations.forEach((animation, animationIndex) => {
@@ -174,6 +172,7 @@ export function AnimationTimeline() {
           });
         } else {
           // Single keyframe synthesized from duration
+          // @ts-ignore
           const kfDuration: number = params.duration || 1000;
           const startTime = animation.position || 0;
           const endTime = startTime + kfDuration;
@@ -216,6 +215,36 @@ export function AnimationTimeline() {
 
     return elements;
   }, [animations, virtualWidth, scrollOffset]);
+
+  // Compute total number of keyframe lines across animations
+  const totalKeyframeLines = useMemo(() => {
+    let count = 0;
+    animations.forEach(animation => {
+      const params = animation.params || {};
+      const animatableProps = [
+        'rotate',
+        'scale',
+        'translateX',
+        'translateY',
+        'opacity',
+        'x',
+        'y',
+        'width',
+        'height',
+      ];
+      animatableProps.forEach(property => {
+        if (params[property] !== undefined) count++;
+      });
+    });
+    return count;
+  }, [animations]);
+
+  // Dynamic timeline height: max(minSize, totalLines * lineHeight + topOffset)
+  const topOffset = TIMELINE_BAR_HEIGHT + 35;
+  const timelineHeight = Math.max(
+    TIMELINE_HEIGHT,
+    totalKeyframeLines * lineHeight + topOffset
+  );
   // Drag state
   const [dragState, setDragState] = useState<
     | null
@@ -301,7 +330,7 @@ export function AnimationTimeline() {
     x: number,
     y: number
   ): InteractiveDiamond | InteractiveLine | null => {
-    y += TIMELINE_BAR_HEIGHT + TIMELINE_BAR_HEIGHT / 2 + 40; // fix for offset from top of canvas
+    // Use canvas-local coordinates directly (drawing uses same baseline)
     // Prefer diamonds over lines when overlapping
     const diamondHit = interactiveElements.find(el => {
       if (el.kind === 'start' || el.kind === 'end') {
@@ -711,8 +740,8 @@ export function AnimationTimeline() {
       <TimelineHeader />
       <div
         ref={scrollContainerRef}
-        className="relative w-full overflow-x-auto overflow-y-hidden"
-        style={{ height: `${TIMELINE_HEIGHT}px` }}
+        className="relative w-full overflow-x-auto overflow-y-auto"
+        style={{ height: `${timelineHeight}px` }}
         onScroll={handleScroll}
       >
         {/* Virtual scrolling div to enable horizontal scrolling */}
@@ -730,7 +759,7 @@ export function AnimationTimeline() {
           ref={canvasRef}
           className="absolute top-0 left-0 h-full cursor-pointer"
           style={{
-            height: `${TIMELINE_HEIGHT}px`,
+            height: `${timelineHeight}px`,
             width: `${Math.min(canvasWidth, window.innerWidth)}px`,
             maxWidth: `${canvasWidth}px`,
           }}

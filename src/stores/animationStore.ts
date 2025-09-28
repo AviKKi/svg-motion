@@ -3,8 +3,11 @@ import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 
 export interface Animation {
-  targets: any; // animejs.Targets
-  params: any; // Animatable properties & Tween parameters & Playback settings
+  targets: string; // animejs.Targets
+  params: Record<
+    string,
+    { to: any; ease?: string; duration: number; delay?: number }[]
+  >; // Animatable properties & Tween parameters & Playback settings
   position: number; // time in ms
 }
 
@@ -28,6 +31,7 @@ interface AnimationState extends AnimationStoreState {
   setCurrentTime: (time: number) => void;
   setIsPlaying: (playing: boolean) => void;
   addAnimation: (animation: Animation) => void;
+  setAnimations: (animations: Animation[]) => void;
   removeAnimation: (index: number) => void;
   updateAnimation: (index: number, animation: Partial<Animation>) => void;
   clearAnimations: () => void;
@@ -110,6 +114,10 @@ export const useAnimationStore = create<AnimationState>()(
           set(state => ({
             animations: [...state.animations, animation],
           }));
+        },
+
+        setAnimations: (animations: Animation[]) => {
+          set({ animations });
         },
 
         removeAnimation: (index: number) => {

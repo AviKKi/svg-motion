@@ -1,4 +1,39 @@
 import { create } from 'zustand';
+import { svgAnimator } from '@/agent/SVGAnimator';
+
+const STORAGE_KEY = 'svg-motion:chat:messages:v1';
+
+function isBrowser(): boolean {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+type SerializableMessage = Omit<Message, 'timestamp'> & { timestamp: string };
+
+function loadMessagesFromStorage(): Message[] {
+  if (!isBrowser()) return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SerializableMessage[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveMessagesToStorage(messages: Message[]): void {
+  if (!isBrowser()) return;
+  try {
+    const serializable: SerializableMessage[] = messages.map(m => ({
+      ...m,
+      timestamp: m.timestamp.toISOString(),
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  } catch {
+    // ignore write errors
+  }
+}
 
 export interface Message {
   id: string;
@@ -21,7 +56,7 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  messages: [],
+  messages: loadMessagesFromStorage(),
   isLoading: false,
   error: null,
 
@@ -31,9 +66,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       id: crypto.randomUUID(),
       timestamp: new Date(),
     };
-    set(state => ({
-      messages: [...state.messages, newMessage],
-    }));
+    set(state => {
+      const updated = [...state.messages, newMessage];
+      saveMessagesToStorage(updated);
+      return { messages: updated };
+    });
   },
 
   setLoading: loading => {
@@ -45,6 +82,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearMessages: () => {
+    saveMessagesToStorage([]);
     set({ messages: [], error: null });
   },
 
@@ -58,12 +96,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     setError(null);
 
     try {
-      // Simulate API call - replace with actual API integration
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Add assistant response
+      await svgAnimator.start();
+      // For UX, reflect that agent processed the message
       addMessage({
-        content: `I received your message: "${content}". This is a placeholder response.`,
+        content: 'Generated animations from your request.',
         role: 'assistant',
       });
     } catch (error) {
