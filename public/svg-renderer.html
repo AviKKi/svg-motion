@@ -158,8 +158,8 @@
 
         // Create new timeline
         currentTimeline = createTimeline({
-          autoplay: true,
-          loop: true,
+          autoplay: false,
+          loop: false,
           onUpdate: function (anim) {
             currentTime = anim.currentTime;
             // Skip one echo right after an external seek
