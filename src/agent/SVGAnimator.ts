@@ -69,12 +69,12 @@ class EventEmitter {
 
 class SVGAnimator extends EventEmitter {
   // keeping placeholders in case future extensions are needed
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-ignore @todo build a planning phase later
   private aim: string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private chatHistory: { role: 'user' | 'assistant'; content: string }[];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private projectContext: string;
+  // @todo build chat history compression/summarization logic in future
+  // private chatHistory: { role: 'user' | 'assistant'; content: string }[];
+  // @todo build a project context in future
+  // private projectContext: string;
   /** used to pull data from the stores */
   private pullPlug: AgentPlug;
   private model: string;
@@ -82,8 +82,8 @@ class SVGAnimator extends EventEmitter {
   constructor() {
     super();
     this.aim = '';
-    this.chatHistory = [];
-    this.projectContext = '';
+    // this.chatHistory = [];
+    // this.projectContext = '';
     this.pullPlug = agentPlug;
     this.model = MODEL_ID;
   }
@@ -256,11 +256,10 @@ class SVGAnimator extends EventEmitter {
     return response.text;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private async plan() {}
+  // @todo build a planning phase later
+  // private async plan() {}
   public async start() {
     try {
-      this.chatHistory = this.pullPlug.getChatHistory();
       const payload = this.buildContext();
 
       const raw = await this.callLLM(payload);

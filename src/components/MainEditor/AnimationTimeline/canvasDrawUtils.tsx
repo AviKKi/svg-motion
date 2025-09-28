@@ -15,14 +15,6 @@ function extractAnimationDuration(animation: Animation): number {
     return params.duration;
   }
 
-  // Check for array of keyframes with durations
-  if (Array.isArray(params.duration)) {
-    return params.duration.reduce(
-      (total: number, dur: number) => total + dur,
-      0
-    );
-  }
-
   // Check for property-specific durations (e.g., rotate: [{ duration: 200 }, { duration: 800 }])
   for (const [, value] of Object.entries(params)) {
     if (Array.isArray(value)) {
@@ -69,31 +61,22 @@ function extractAnimatedProperties(animation: Animation): Array<{
       const keyframes: Array<{ time: number; duration: number }> = [];
       const propValue = params[prop];
 
-      if (Array.isArray(propValue)) {
-        // Handle array of keyframes
-        let currentTime = animation.position || 0;
+      // Handle array of keyframes
+      let currentTime = animation.position || 0;
 
-        propValue.forEach(keyframe => {
-          if (typeof keyframe === 'object' && keyframe !== null) {
-            const duration = keyframe.duration || 1000;
-            const delay = keyframe.delay || 0;
+      propValue.forEach(keyframe => {
+        if (typeof keyframe === 'object' && keyframe !== null) {
+          const duration = keyframe.duration || 1000;
+          const delay = keyframe.delay || 0;
 
-            keyframes.push({
-              time: currentTime + delay,
-              duration: duration,
-            });
+          keyframes.push({
+            time: currentTime + delay,
+            duration: duration,
+          });
 
-            currentTime += delay + duration;
-          }
-        });
-      } else {
-        // Handle single value - create a single keyframe
-        const duration = params.duration || 1000;
-        keyframes.push({
-          time: animation.position || 0,
-          duration: duration,
-        });
-      }
+          currentTime += delay + duration;
+        }
+      });
 
       if (keyframes.length > 0) {
         properties.push({
