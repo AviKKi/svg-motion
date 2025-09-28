@@ -736,7 +736,7 @@ export function AnimationTimeline() {
   }, [currentTime, theme, scrollOffset, virtualWidth, canvasWidth, animations]);
 
   return (
-    <div className="h-full border-t border-border bg-muted">
+    <div className="h-full border-t border-border bg-muted overflow-y-auto">
       <TimelineHeader />
       <div
         ref={scrollContainerRef}
