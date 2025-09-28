@@ -16,6 +16,7 @@ interface AnimationStoreState {
   isPlaying: boolean;
   animations: Animation[];
   selectedSvgPath: string | null; // deterministic path of selected element in svg DOM
+  namedNodes: Record<string, string>; // path -> name mapping
 }
 
 interface AnimationState extends AnimationStoreState {
@@ -35,6 +36,7 @@ interface AnimationState extends AnimationStoreState {
   stop: () => void;
   seek: (time: number) => void;
   setSelectedSvgPath: (path: string | null) => void;
+  setNodeName: (path: string, name: string) => void;
 }
 
 // @ts-ignore no-unused-vars
@@ -46,6 +48,7 @@ const initialState: AnimationStoreState = {
   isPlaying: false,
   animations: [],
   selectedSvgPath: null,
+  namedNodes: {},
 };
 // Quick-swappable test state to validate animation plumbing
 export const testState: AnimationStoreState = {
@@ -71,6 +74,7 @@ export const testState: AnimationStoreState = {
     },
   ],
   selectedSvgPath: null,
+  namedNodes: {},
 };
 export const useAnimationStore = create<AnimationState>()(
   subscribeWithSelector(
@@ -145,6 +149,10 @@ export const useAnimationStore = create<AnimationState>()(
         setSelectedSvgPath: (path: string | null) => {
           set({ selectedSvgPath: path });
         },
+
+        setNodeName: (path: string, name: string) => {
+          set(state => ({ namedNodes: { ...state.namedNodes, [path]: name } }));
+        },
       }),
       {
         name: 'animation-storage',
@@ -155,6 +163,7 @@ export const useAnimationStore = create<AnimationState>()(
           svgName: state.svgName,
           animations: state.animations,
           selectedSvgPath: state.selectedSvgPath,
+          namedNodes: state.namedNodes,
         }),
       }
     )

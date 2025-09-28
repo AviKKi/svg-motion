@@ -211,6 +211,7 @@ type FolderProps = {
   element: string;
   isSelectable?: boolean;
   isSelect?: boolean;
+  rightSlot?: React.ReactNode;
 } & FolderComponentProps;
 
 const Folder = forwardRef<
@@ -225,6 +226,7 @@ const Folder = forwardRef<
       isSelectable = true,
       isSelect,
       children,
+      rightSlot,
       ...props
     },
     ref
@@ -245,11 +247,12 @@ const Folder = forwardRef<
       <AccordionPrimitive.Item
         {...props}
         value={value}
+        ref={ref}
         className="relative h-full overflow-hidden"
       >
         <AccordionPrimitive.Trigger
           className={cn(
-            `flex items-center gap-1 py-1 px-2 rounded-md text-sm`,
+            `flex relative items-center gap-1 py-1 px-2 rounded-md text-sm`,
             className,
             {
               'bg-purple-500 text-white rounded-md': isSelect && isSelectable,
@@ -269,7 +272,8 @@ const Folder = forwardRef<
           {expandedItems?.includes(value)
             ? (openIcon ?? <ChevronDownIcon className="size-4" />)
             : (closeIcon ?? <ChevronRightIcon className="size-4" />)}
-          <span>{element}</span>
+          <span className="truncate">{element}</span>
+          {rightSlot && <div className="ml-auto pl-2">{rightSlot}</div>}
         </AccordionPrimitive.Trigger>
         <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down relative h-full overflow-hidden text-sm">
           {element && indicator && <TreeIndicator aria-hidden="true" />}
@@ -301,6 +305,7 @@ const File = forwardRef<
     isSelectable?: boolean;
     isSelect?: boolean;
     fileIcon?: React.ReactNode;
+    rightSlot?: React.ReactNode;
   } & React.ButtonHTMLAttributes<HTMLButtonElement>
 >(
   (
@@ -311,6 +316,7 @@ const File = forwardRef<
       isSelectable = true,
       isSelect,
       fileIcon,
+      rightSlot,
       children,
       ...props
     },
@@ -324,7 +330,7 @@ const File = forwardRef<
         type="button"
         disabled={!isSelectable}
         className={cn(
-          'flex w-fit items-center gap-1 px-2 py-1 rounded-md pr-1 text-sm duration-200 ease-in-out rtl:pr-0 rtl:pl-1',
+          'flex relative w-max items-center gap-1 px-2 py-1 rounded-md pr-1 text-sm duration-200 ease-in-out rtl:pr-0 rtl:pl-1',
           {
             'bg-purple-500 text-white': isSelected && isSelectable,
           },
@@ -340,6 +346,7 @@ const File = forwardRef<
       >
         {fileIcon ?? <FileIcon className="size-4" />}
         {children}
+        {rightSlot && <div className="ml-auto pl-2">{rightSlot}</div>}
       </button>
     );
   }
