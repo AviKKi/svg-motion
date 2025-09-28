@@ -6,6 +6,7 @@ import { useThemeStore } from '@/stores/themeStore';
 
 export function MainEditor() {
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  // @ts-ignore
   const [apiKey, setApiKey] = useState<string>('');
   const { theme } = useThemeStore();
 

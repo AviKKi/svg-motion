@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChatStore, type Message } from '@/stores/chatStore';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot } from 'lucide-react';
 
 export function ChatWindow() {
   const [inputValue, setInputValue] = useState('');

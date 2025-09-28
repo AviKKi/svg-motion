@@ -4,7 +4,6 @@ import { shallow } from 'zustand/shallow';
 type NullableWindow = Window | null;
 
 class _SVGRendererManager {
-  private iframeElement: HTMLIFrameElement | null = null;
   private iframeWindow: NullableWindow = null;
   private isReady: boolean = false;
   private unsubscribeFns: Array<() => void> = [];
@@ -12,7 +11,6 @@ class _SVGRendererManager {
 
   init(iframe: HTMLIFrameElement) {
     this.dispose();
-    this.iframeElement = iframe;
     this.iframeWindow = iframe?.contentWindow ?? null;
     window.addEventListener('message', this.boundOnMessage);
     this.setupStoreSubscriptions();
@@ -24,7 +22,6 @@ class _SVGRendererManager {
     window.removeEventListener('message', this.boundOnMessage);
     this.unsubscribeFns.forEach(fn => fn());
     this.unsubscribeFns = [];
-    this.iframeElement = null;
     this.iframeWindow = null;
     this.isReady = false;
   }
