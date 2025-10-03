@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Header } from './MainEditor/Header';
 import { MainContent } from './MainEditor/MainContent';
 import { SettingsDialog } from './SettingsDialog';
+import { ExportDialog } from './ExportDialog';
 import { useThemeStore } from '@/stores/themeStore';
 
 export function MainEditor() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const { theme } = useThemeStore();
 
   useEffect(() => {
@@ -20,7 +22,10 @@ export function MainEditor() {
 
   return (
     <div className="h-screen w-screen flex flex-col">
-      <Header onSettingsClick={() => setShowSettingsDialog(true)} />
+      <Header
+        onSettingsClick={() => setShowSettingsDialog(true)}
+        onExportClick={() => setShowExportDialog(true)}
+      />
 
       <MainContent />
 
@@ -28,6 +33,12 @@ export function MainEditor() {
       <SettingsDialog
         open={showSettingsDialog}
         onOpenChange={setShowSettingsDialog}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
       />
     </div>
   );
