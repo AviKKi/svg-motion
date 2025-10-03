@@ -9,42 +9,7 @@ import {
   fewShot,
   type AgentPayload,
 } from './prompts';
-
-// Model and routing configuration
-type ProviderRoutingPreferences = {
-  order?: string[];
-  allow_fallbacks?: boolean;
-  require_parameters?: boolean;
-  data_collection?: 'allow' | 'deny';
-  only?: string[];
-  ignore?: string[];
-  quantizations?: (
-    | 'int4'
-    | 'int8'
-    | 'fp4'
-    | 'fp6'
-    | 'fp8'
-    | 'fp16'
-    | 'bf16'
-    | 'fp32'
-    | 'unknown'
-  )[];
-  sort?: 'price' | 'throughput' | 'latency';
-  max_price?: {
-    prompt?: number | string;
-    completion?: number | string;
-    image?: number | string;
-    audio?: number | string;
-    request?: number | string;
-  };
-};
-const MODEL_ID = 'qwen/qwen3-coder:nitro';
-const PROVIDER_PREFERENCES: ProviderRoutingPreferences = {
-  quantizations: ['fp8'], // 'fp16', 'bf16', 'fp32'],
-  max_price: { completion: 4 },
-  // sort: 'throughput', // optional; ':nitro' already prioritizes throughput
-};
-const DEFAULT_TEMPERATURE = 0.2;
+import { useModelStore } from '@/stores/modelStore';
 
 const AnimatorAgentEvents = {
   DONE: 'DONE',
@@ -77,7 +42,6 @@ class SVGAnimator extends EventEmitter {
   // private projectContext: string;
   /** used to pull data from the stores */
   private pullPlug: AgentPlug;
-  private model: string;
 
   constructor() {
     super();
@@ -85,7 +49,6 @@ class SVGAnimator extends EventEmitter {
     // this.chatHistory = [];
     // this.projectContext = '';
     this.pullPlug = agentPlug;
-    this.model = MODEL_ID;
   }
 
   private normalizeName(input: string): string {
@@ -236,6 +199,9 @@ class SVGAnimator extends EventEmitter {
       throw new Error('OpenRouter API key not set');
     }
 
+    // Get current model settings from store
+    const { settings } = useModelStore.getState();
+
     const openrouter = createOpenRouter({ apiKey });
     const history = this.pullPlug.getChatHistory();
     const messages: ModelMessage[] = [
@@ -244,13 +210,13 @@ class SVGAnimator extends EventEmitter {
       ...history,
       { role: 'user', content: buildUserPrompt(payload) },
     ];
-    const model = openrouter.chat(this.model, {
-      provider: PROVIDER_PREFERENCES,
+    const model = openrouter.chat(settings.modelId, {
+      provider: settings.providerPreferences,
     });
     const response = await streamText({
       model,
       messages,
-      temperature: DEFAULT_TEMPERATURE,
+      temperature: settings.temperature,
     });
     await response.consumeStream();
     return response.text;

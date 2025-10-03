@@ -4,9 +4,10 @@ import { useThemeStore } from '@/stores/themeStore';
 
 interface HeaderProps {
   onSettingsClick: () => void;
+  onExportClick: () => void;
 }
 
-export function Header({ onSettingsClick }: HeaderProps) {
+export function Header({ onSettingsClick, onExportClick }: HeaderProps) {
   const { theme, toggleTheme } = useThemeStore();
 
   return (
@@ -23,7 +24,7 @@ export function Header({ onSettingsClick }: HeaderProps) {
             <Sun className="h-4 w-4" />
           )}
         </Button>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={onExportClick}>
           <Download className="h-4 w-4" />
         </Button>
       </div>
